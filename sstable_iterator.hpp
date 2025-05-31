@@ -7,13 +7,16 @@
 #include "slice.hpp"
 #include "value.hpp"
 
-
 class SSTableIterator : public SortedTableIterator {
  public:
   explicit SSTableIterator(SSTableReader* reader);
   ~SSTableIterator() override = default;
 
-  // SortedTableIterator interface
+  SSTableIterator(const SSTableIterator&) = delete;
+  SSTableIterator& operator=(const SSTableIterator&) = delete;
+  SSTableIterator(SSTableIterator&&) = delete;
+  SSTableIterator& operator=(SSTableIterator&&) = delete;
+
   bool Valid() const override;
   void SeekToFirst() override;
   void Seek(const Slice& target) override;
@@ -23,29 +26,23 @@ class SSTableIterator : public SortedTableIterator {
   Result status() const override;
 
  private:
-  // This private method will parse from the reader's internal buffer
   Result ParseEntryFromBuffer(size_t parse_from_offset, Slice* key_out,
                                 ValueEntry* value_out,
                                 size_t* next_entry_start_offset_out);
 
-  // Helper to load the next available block (via reader_)
-  // and then try to parse its first entry using ParseEntryFromBuffer.
-  // Sets valid_ and status_ internally.
   void LoadBlockAndReposition(uint64_t block_start_file_offset);
 
-  SSTableReader* reader_; // Non-owning
+  SSTableReader* reader_; 
   
-  // State related to the current block AS KNOWN BY THE ITERATOR
-  uint64_t current_block_start_offset_; // File offset of the start of the block currently in reader's buffer
-  uint64_t current_block_total_size_;   // Total size on disk (header + data) of the loaded block
+  uint64_t current_block_start_offset_; 
+  uint64_t current_block_total_size_;   
 
-  // State related to the current entry being pointed to
-  size_t next_entry_offset_; // Offset *within the reader's current block buffer* for the start of the NEXT entry
-  Slice current_key_;        // Points into reader_->internal_block_buffer_
-  ValueEntry current_value_; // Its value_slice points into reader_->internal_block_buffer_
+  size_t current_entry_offset_in_block_; // Offset *within the reader's current block buffer* for the start of the CURRENT entry
+  Slice current_key_;        
+  ValueEntry current_value_; 
   
-  bool valid_ = false;
-  Result status_ = Result::OK();
+  bool valid_;
+  Result status_;
 };
 
 #endif // SSTABLE_ITERATOR_HPP

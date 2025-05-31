@@ -2,6 +2,8 @@
 #include "value.hpp"
 #include <cstddef>
 
+#include <iostream>
+
 
 // --- SkipList (Map-backed placeholder) ---
 
@@ -68,17 +70,28 @@ Result SkipList::Put(const Slice& key_input, const Slice& value_input) {
 
 
 Result SkipList::Get(const Slice& key) const {
+	// Assuming 'table_' is your std::map<Slice, ValueEntry, ...>
+	std::cout << "[SkipList::Get] Looking for key: " << key.ToString() << std::endl; // DEBUG
 	auto it = table_.find(key);
 	if (it == table_.end()) {
-		return Result::NotFound(key.ToString());
+			std::cout << "[SkipList::Get] Key not found in map." << std::endl; // DEBUG
+			// Key is not in the map at all.
+			return Result::NotFound(key.ToString() + " (not in skiplist map)");
 	}
 
+	// Key is in the map, 'it->second' is a ValueEntry
 	const ValueEntry& entry = it->second;
+	std::cout << "[SkipList::Get] Key found in map. Entry type: " 
+						<< (entry.IsTombstone() ? "TOMBSTONE" : "DATA") << std::endl; // DEBUG
+
 	if (entry.IsTombstone()) {
-		return Result::NotFound(key.ToString() + " (deleted)");
-	}
-	// It's a live value
-	return Result::OK(entry.value_slice);
+			// It's a tombstone. Return an OK Result that indicates this.
+			// The public DB::Get will interpret this as the key being "deleted".
+			return Result::OkTombstone();
+	} else {
+			// It's actual data.
+			return Result::OK(entry.value_slice); // This Result constructor sets value_tag_ to kData
+		}
 }
 
 Result SkipList::Delete(const Slice& key_input) {

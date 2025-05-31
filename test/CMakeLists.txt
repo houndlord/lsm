@@ -13,7 +13,8 @@ add_executable(run_tests
     skip_list_test.cpp
     test_sstable_writer.cpp
     test_sstable_reader.cpp
-    test_utils.cpp # Add the new test utility source file
+    test_utils.cpp
+    test_db.cpp
 )
 
 target_link_libraries(run_tests

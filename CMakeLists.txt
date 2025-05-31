@@ -54,6 +54,8 @@ add_library(lsm_core
     sstable_iterator.cpp
     mem_table.hpp
     mem_table.cpp
+    db.hpp
+    db.cpp
 )
 target_include_directories(lsm_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -68,6 +70,7 @@ target_include_directories(lsm_core PUBLIC ${zstd_SOURCE_DIR}/lib)
 # --- Testing Subdirectory ---
 option(BUILD_TESTS "Build tests for LSMTree" ON)
 if(BUILD_TESTS)
+  target_compile_definitions(lsm_core PUBLIC LSM_PROJECT_ENABLE_TESTING_HOOKS)
   enable_testing()
   add_subdirectory(test)
 endif()

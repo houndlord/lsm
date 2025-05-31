@@ -30,20 +30,39 @@ class SkipListTest : public ::testing::Test {
   }
 
   Result GetString(const std::string& k, std::string* value_out_str = nullptr) {
-    Result r = list_.Get(Slice(k));
+    Result r = list_.Get(Slice(k)); // list_.Get() is SkipList::Get()
+
+    std::cout << "[SkipListTest::GetString] For key '" << k << "', list_.Get() result: ok=" << r.ok()
+              << ", code=" << static_cast<int>(r.code()) << ", msg='" << r.message()
+              << "', has_slice=" << r.value_slice().has_value()
+              << ", tag=" << (r.value_tag().has_value() ? static_cast<int>(r.value_tag().value()) : -1)
+              << std::endl; // DEBUG
 
     if (r.ok()) {
-      if (!r.value_slice().has_value()) {
-        return Result::Corruption(
-            "Internal error in GetString for key '" + k +
-            "': Get() returned OK but value_slice is empty. Original Result: " + r.ToString());
-      }
-      if (value_out_str) {
-        *value_out_str = r.value_slice().value().ToString();
-      }
+        // Check if it's a tombstone first
+        if (r.value_tag().has_value() && r.value_tag().value() == ValueTag::kTombstone) {
+            std::cout << "[SkipListTest::GetString] Detected TOMBSTONE for key '" << k << "'. Returning NotFound." << std::endl; //DEBUG
+            // It's a tombstone. For the purpose of GetString returning a value, this means "not found".
+            return Result::NotFound("Key '" + k + "' is a tombstone in SkipList");
+        }
+        
+        // If it's OK and not a tombstone, it must be data and have a value_slice AND data tag.
+        if (r.value_slice().has_value() && r.value_tag().has_value() && r.value_tag().value() == ValueTag::kData) {
+            if (value_out_str) {
+                *value_out_str = r.value_slice().value().ToString();
+            }
+            // Return the original 'r' because it's already a valid OK_Data result
+            return r; 
+        } else {
+            // This path means r.ok() is true, but it's not a tombstone and not valid data.
+            std::cout << "[SkipListTest::GetString] Corruption: OK but not Tombstone and not valid Data for key '" << k << "'" << std::endl; //DEBUG
+            return Result::Corruption(
+                "Internal error in GetString for key '" + k +
+                "': Get() returned OK but not valid data or tombstone. Original Result: " + r.ToString());
+        }
     }
-    return r;
-  }
+    return r; // Return original result if not r.ok() initially (e.g. kNotFound from SkipList::Get)
+}
 };
 
 

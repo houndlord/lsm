@@ -2,9 +2,19 @@
 #include "result.hpp"
 #include "slice.hpp"
 #include "sorted_table.hpp"
+#include <iostream>
 
 MemTable::MemTable(Arena& arena) : arena_ref_(arena) {
+  std::cout << "[MemTable Constructor] Called. Arena ref: " << &arena_ref_ << std::endl; // DEBUG
   table_ = std::make_unique<SkipList>(arena_ref_);
+  if (!table_) {
+        std::cout << "[MemTable Constructor] FAILED to create SkipList (table_)." << std::endl; // DEBUG
+        // This would be a problem, but std::make_unique throws on failure, make_unique_nothrow would return nullptr
+        // If using make_unique_nothrow, you'd need to handle the nullptr case.
+        // For std::make_unique, if this fails, an exception is thrown.
+    } else {
+        std::cout << "[MemTable Constructor] SkipList (table_) created. Ptr: " << table_.get() << std::endl; // DEBUG
+    }
 }
 
 MemTable::~MemTable() {};

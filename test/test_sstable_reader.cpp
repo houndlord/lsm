@@ -78,7 +78,7 @@ TEST_F(SSTableReaderAndIteratorTest, Reader_Init_NonExistentFile) {
     Result res = reader.Init();
     ASSERT_FALSE(res.ok());
     ASSERT_EQ(res.code(), ResultCode::kIOError); // Or specific code for file not found
-    ASSERT_FALSE(reader.isOpen());
+    ASSERT_FALSE(reader.IsOpen());
 }
 
 TEST_F(SSTableReaderAndIteratorTest, Reader_Init_EmptySSTableFile) {
@@ -87,7 +87,7 @@ TEST_F(SSTableReaderAndIteratorTest, Reader_Init_EmptySSTableFile) {
     SSTableReader reader(temp_sstable_filename_);
     Result res = reader.Init();
     ASSERT_TRUE(res.ok()) << "Init failed for empty SSTable: " << res.message();
-    ASSERT_TRUE(reader.isOpen());
+    ASSERT_TRUE(reader.IsOpen());
 
     // Get on an empty SSTable should be NotFound
     Slice test_key("anykey");
@@ -103,7 +103,7 @@ TEST_F(SSTableReaderAndIteratorTest, Reader_Init_ValidSSTableFile) {
     SSTableReader reader(temp_sstable_filename_);
     Result res = reader.Init();
     ASSERT_TRUE(res.ok()) << "Init failed for valid SSTable: " << res.message();
-    ASSERT_TRUE(reader.isOpen());
+    ASSERT_TRUE(reader.IsOpen());
 }
 
 TEST_F(SSTableReaderAndIteratorTest, Reader_Get_SingleBlock_KeyExists_NoCompression) {
@@ -154,10 +154,10 @@ TEST_F(SSTableReaderAndIteratorTest, Reader_Get_KeyNotExists) {
     ASSERT_EQ(get_res.code(), ResultCode::kNotFound);
 }
 
-TEST_F(SSTableReaderAndIteratorTest, Reader_Get_KeyIsTombstone_ReturnsNotFound) {
+TEST_F(SSTableReaderAndIteratorTest, Reader_Get_KeyIsTombstone_ReturnsOkWithTombstoneTag) { // Renamed test
     std::vector<TestEntry> entries = {
         {"live_key", "live_value"},
-        {"deleted_key", "", ValueTag::kTombstone} // Writer handles empty value for tombstone
+        {"deleted_key", "", ValueTag::kTombstone}
     };
     WriteTestSSTable(entries, false);
 
@@ -166,8 +166,11 @@ TEST_F(SSTableReaderAndIteratorTest, Reader_Get_KeyIsTombstone_ReturnsNotFound) 
 
     Slice key_to_find("deleted_key");
     Result get_res = reader.Get(key_to_find, arena_for_reads_.get());
-    ASSERT_FALSE(get_res.ok()) << "Get for a tombstone should result in NotFound.";
-    ASSERT_EQ(get_res.code(), ResultCode::kNotFound);
+    
+    ASSERT_TRUE(get_res.ok()) << "Get for a tombstone should return an OK status.";
+    ASSERT_TRUE(get_res.value_tag().has_value());
+    ASSERT_EQ(get_res.value_tag().value(), ValueTag::kTombstone) << "The value_tag should indicate kTombstone.";
+    ASSERT_FALSE(get_res.value_slice().has_value()) << "Value slice should not be present for a tombstone from Get.";
 }
 
 

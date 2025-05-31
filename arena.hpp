@@ -44,6 +44,12 @@ struct Arena {
     block_list_.clear();
   }
 
+  #ifdef LSM_PROJECT_ENABLE_TESTING_HOOKS
+  // This declaration is only visible when tests are being built
+  bool IsAddressInCurrentBlock(const void* ptr) const;
+  #endif
+
+
  private:
   void AllocateNewBlock(size_t size_bytes);
 
